@@ -1,0 +1,864 @@
+<title>Presidential Speech Rhetoric</title>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<script src="d3.v3.min.js"></script>
+		<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+		<link href='http://fonts.googleapis.com/css?family=Oswald:300' rel='stylesheet' type='text/css'>
+		<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="jquery-ui.js"></script>
+		<link rel="stylesheet" href="jquery-ui.css">
+		<link rel="stylesheet" href="bootstrap.min.css">
+		<link rel="stylesheet" href="bootstrap-theme.min.css">
+		<script src="d3.tip.v0.6.3.js"></script>
+		<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+		<script src="bootstrap.min.js"></script>
+		<link rel="icon" type="image/png" href="favicon.ico">
+	</head>
+<body>
+	<nav class="navbar navbar-inverse navbar-static-top" style="margin-bottom: 0">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Presidential Partisanship and Temporal Relevance</a>
+        </div>
+        <div id="navbar">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#">Ryan Campbell (rjc362)</a></li>
+            <li><a href="#">Jonathan Hayon (jh2224)</a></li>
+            <li><a href="#">Shaoke Xu (sx77)</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+
+
+      </div>
+    </nav>
+    <div class="jumbotron" >
+    	<div class="container">
+      		<div class="row">
+	      		<div class="col-md-8">
+		      
+			        <h1>Political Rhetoric: </h1>
+				<h2>Presidential Partisanship and Temporal Relevance</h2>
+			        <p style="font-size: 16">
+
+			        	The word cloud is made up of keywords extracted from speeches given by the last 10 presidents prior to and during their presidencies (beginning with John F. Kennedy).  The size of the word is correlated to its relative importance, and its x-axis position indicates the relative importance of the word as used by different political parties.  <br><br>
+
+			        	Words displayed on the left were important only to democratic presidents, words on the right to the right, and centrally located words were equally important to both parties.  <br><br>
+
+			        	Hover and click on phrases to see which presidents used it and a timeline of its usage, and hover over the presidents to see the focuses and important events of their time in office. Adjust the date range by clicking and dragging the slider elements.</p>
+		      </div>
+	  	  
+	  	  <div class="col-md-4">
+	  	  	<img src="logo.png" height="300" width="300">
+	  	  </div>
+	  	 </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+
+        <div class="col-md-9"><h2>Wordcloud</h2></div>
+        <div class="col-md-3"><div style="width:210px; float:right"><h2 style="text-align:center;">Who Said It?</h2></div></div>
+       </div>
+
+      <div class="row">
+
+        <div class="col-md-9">
+        	
+			<div id="plot">
+
+			</div>
+			<br>
+			<div id="slider"></div>
+			<div id="yearAxis"></div>
+			<svg height=0>
+				<defs>
+					<radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+						<stop offset="0%" style="stop-color:rgb(255,255, 255); stop-opacity:1" />
+						<stop offset="100%" style="stop-color:rgb(255, 255, 255);stop-opacity:0.4" />
+					</radialGradient>
+				</defs>
+			</svg>
+
+			<style>
+			.axis path { fill: none; stroke: black; stroke-width: 2;}
+			.axis line { stroke: black;}
+			.axis text { font-family: Oswald; font-weight: bold; stroke-width:2;}
+			</style>
+
+			<script>
+				var pI;
+				d3.json('presidentialInfo.json', function(error, data){
+					pI = data;
+					createPresidentInfoTags(data);
+				});
+				
+				var width = d3.select("#plot").style("width");
+				width = +width.substring(0, width.length-2); 
+				///var width = 900;
+				var height = 550;
+				var padding = 150;
+				var fontSize = 8;
+				var startYear = 1950;
+				var endYear = 2015;
+
+				var info = null;
+				var svg = d3.select("#plot").append("svg").attr("height", height).attr("width", width);
+				
+				var xScale;
+				var yScale;
+				var colorScale;
+				var repThreshold = 0.25;
+				var demThreshold = 0.38;
+
+				var Presidents = new Object();
+				Presidents["Richard Nixon"] = 1;
+				Presidents["Lyndon Johnson"] = 0;
+				Presidents["Bill Clinton"] = 0;
+				Presidents["Gerald Ford"] = 1;
+				Presidents["Jimmy Carter"] = 0;
+				Presidents["Barack Obama"] = 0;
+				Presidents["George H W Bush"] = 1;
+				Presidents["George W Bush"] = 1;
+				Presidents["Ronald Reagan"] = 1;
+				Presidents["John Kennedy"] = 0;
+
+				var clicked = null;
+				var clickedRect = null;
+				var updating = false;
+				d3.select("#slider").style("width", width - padding).style("x", padding/2).style("margin-left", padding/2);
+				var sliderAxisSvg = d3.select("#yearAxis").append("svg").attr("height", 50).attr("width", width);
+				var yearScale = d3.scale.linear().domain([1950, 2015]).range([padding/2, width-padding/2]);
+				var yearAxis = d3.svg.axis().scale(yearScale).orient("bottom").tickFormat(d3.format(".0"));
+				sliderAxisSvg.append("g")
+				  .attr("class", "x axis")
+				  .call(yearAxis);
+				var startYearLine = sliderAxisSvg.append("line").attr("x1", yearScale(1950)).attr("x2", yearScale(1950)).attr("y1", -2).attr("y2", 30).style("stroke", "DimGray").style("opacity", 0);
+				var startYearText = sliderAxisSvg.append("text").text("1950").attr("x", yearScale(1950)).attr("y", 42).style("text-anchor", "middle").style("font-family", "Oswald").style("font-size", 12).style("stroke", "DimGray").style("opacity", 0);
+				var endYearLine = sliderAxisSvg.append("line").attr("x1", yearScale(2015)).attr("x2", yearScale(2015)).attr("y1", -2).attr("y2", 30).style("stroke", "DimGray").style("opacity", 0);
+				var endYearText = sliderAxisSvg.append("text").text("2015").attr("x", yearScale(2015)).attr("y", 42).style("text-anchor", "middle").style("font-family", "Oswald").style("font-size", 12).style("stroke", "DimGray").style("opacity", 0);
+				$( "#slider" ).slider({
+					range: true,
+					value:100,
+					min: 1950,
+					max: 2015,
+					values: [1950, 2015],
+					step: 1,
+					stop: function( event, ui ) {
+						var start = ui.values[0];
+						var end = ui.values[1];
+						startYearLine.transition().duration(300).style("opacity", 0);
+						endYearLine.transition().duration(300).style("opacity", 0);
+						startYearText.transition().duration(300).style("opacity", 0);
+						endYearText.transition().duration(300).style("opacity", 0);
+						updateWordRange(start, end);
+						update(startYear, endYear, clicked[0][0].textContent);
+						showPresidents(clicked[0][0].textContent, info, start, end);
+					},
+					slide: function(event, ui) {
+						startYear = ui.values[0];
+						endYear = ui.values[1];
+						startYearLine.attr("x1", yearScale(startYear)).attr("x2", yearScale(startYear)).style("opacity", 0.75);
+						endYearLine.attr("x1", yearScale(endYear)).attr("x2", yearScale(endYear)).style("opacity", 0.75);
+						startYearText.style("opacity", 0.75).attr("x", yearScale(startYear)).text(startYear);
+						endYearText.style("opacity", 0.75).attr("x", yearScale(endYear)).text(endYear);
+					}
+				});
+
+				
+
+				//Provided by: https://gist.github.com/trtg/3922684
+				d3.selection.prototype.moveToFront = function() {
+				  return this.each(function(){
+					this.parentNode.appendChild(this);
+				  });
+				};
+
+				function randomWord(firstRun){
+					var word = d3.select(".randomWord");
+					word.classed("randomWord", false);
+					if(firstRun) initializeHistogram(startYear, endYear, word[0][0].textContent);
+ 
+					word.on("mouseover", function(){})
+						.on("mouseout", function(){});
+					word.transition().ease("elastic").duration(500).style("font-size", 24).style("fill", colorScale(word.attr("x"))).attr("opacity", 1);
+					var bbox = word.node().getBBox();
+					var padding = 2;
+					var ellipse = svg.append("ellipse")
+						.attr("id", "r" + word.text().replace(/ /g , "_"))
+						.attr("cx", bbox.x + bbox.width/2)
+						.attr("cy", bbox.y + bbox.height/2)
+						.attr("rx", 10*bbox.width/4)
+						.attr("ry", 10*bbox.height/4)
+						.style("pointer-events", "none")
+						.attr("fill", "url(#grad1)");
+					word.moveToFront();
+					clicked = word;
+					clickedRect = ellipse;
+					showPresidents(word.text(), info);
+				}
+
+				function textClick(){
+					var obj = d3.select(this);
+					if(clicked != null && clicked[0][0] == obj[0][0]) return;
+					if(clicked != null){
+						clicked.on("mouseout", textMouseOut).on("mouseover", textMouseOver);
+						var evt = document.createEvent("MouseEvents");
+						evt.initMouseEvent("mouseout", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+						clicked[0][0].dispatchEvent(evt);
+					} 
+					obj.on("mouseover", function(){})
+						.on("mouseout", function(){});
+					obj.transition().ease("elastic").duration(500).style("font-size", 24).style("fill", colorScale(obj.attr("x"))).attr("opacity", 1);
+					var bbox = obj.node().getBBox();
+					var padding = 2;
+					var ellipse = d3.select("#r" + obj.text().replace(/ /g , "_"))
+						.attr("cx", bbox.x + bbox.width/2)
+						.attr("cy", bbox.y + bbox.height/2)
+						.attr("rx", 5*bbox.width/4)
+						.attr("ry", 5*bbox.height/4)
+					obj.moveToFront();
+					clicked = obj;
+					clickedRect = ellipse;
+					word = obj[0][0].textContent;
+					showPresidents(word, info, startYear, endYear);
+					update(startYear, endYear, word);
+				}
+
+				function textMouseOver(){
+					if(clicked != null){
+						clickedRect.moveToFront();
+						clicked.moveToFront();
+					}
+					var obj = d3.select(this);
+					obj.transition().ease("elastic").duration(500).style("font-size", 22).style("fill", "black").attr("opacity", 1);
+					var bbox = obj.node().getBBox();
+					var padding = 2;
+					var ellipse = svg.append("ellipse")
+						.attr("id", "r" + d3.select(this).text().replace(/ /g , "_"))
+						.attr("cx", bbox.x + bbox.width/2)
+						.attr("cy", bbox.y + bbox.height/2)
+						.attr("rx", bbox.width)
+						.attr("ry", bbox.height)
+						.style("pointer-events", "none")
+						.attr("fill", "url(#grad1)");
+					obj.moveToFront();
+				}
+
+				function textMouseOut(d){
+					var obj = d3.select(this);
+					//console.log(obj.attr("size"));
+					obj.transition().duration(400).style("font-size", obj.attr("size")).style("fill", "black").attr("opacity", 0.4);
+					d3.select("#r" + d3.select(this).text().replace(/ /g , "_")).remove();
+				}
+
+				function plotWords(){
+					var maxDemImportance = 0;
+					var maxRepImportance = 0;
+					var words = Object.keys(info.words).filter(function(w){
+						var demWords = info.words[w].filter(function(o){return Presidents[o.president] == 0;});
+						var repWords = info.words[w].filter(function(o){return Presidents[o.president] == 1;});
+						var maxDem = d3.max(demWords, function(x){return x.importance;});
+						info.words[w].maxDem = maxDem;
+						var maxRep = d3.max(repWords, function(x){return x.importance;});
+						info.words[w].maxRep = maxRep;
+						if(maxDem > maxDemImportance) maxDemImportance = maxDem;
+						if(maxRep > maxRepImportance) maxRepImportance = maxRep;
+						return maxRep> repThreshold || maxDem > demThreshold;
+					});
+					yScale = d3.scale.linear().domain([0,1]).range([height-35, 25]);
+					demFontSizeScale = d3.scale.log().domain([demThreshold,maxDemImportance]).range([4, 22]);
+					repFontSizeScale = d3.scale.log().domain([repThreshold,maxRepImportance]).range([4, 22]);
+					xScale = d3.scale.linear().domain([0, 1]).range([padding, width-padding]);
+					colorScale = d3.scale.linear().domain([padding, width-padding]).range(["blue", "red"]);
+
+					svg.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height)
+						.attr("fill", "none")
+						.attr("stroke", "DarkGray")
+						.attr("stroke-width", "4px");
+					svg.append("line").attr("x1", width/2).attr("x2", width/2).attr("y1", height-25).attr("y2", 0)
+						.attr("stroke", "black").attr("opacity", 0.7);
+
+					var ordScale = d3.scale.ordinal().rangePoints([padding/2,width-padding/2]).domain(["DEMOCRAT", "MODERATE", "REPUBLICAN"]);
+
+					var xAxis = d3.svg.axis().scale(ordScale).orient("bottom");
+					svg.append("g")
+					  .attr("class", "x axis")
+					  .attr("transform", "translate(0, " + (height-30) + ")")
+					  .call(xAxis);
+
+					var randomIndex = Math.floor(Math.random() * words.length);
+					var randomWordW = words[randomIndex];
+					svg.selectAll("text").data(words, function(d) { return(d); }).enter().append("text")
+						.classed("words", true)
+						.text(function(w){return w;})
+						.classed("randomWord", function(w){ return w  == randomWordW;})
+						.attr("x", function(w){
+							var party = determineParty(w);
+							if(party == 0) party += Math.random()/ 8; //add some noise to prevent clutter
+							if(party == 1) party -= Math.random() / 8;
+							return xScale(party);
+						})
+						.attr("y", function(w){return yScale(Math.random());})
+						.attr("text-anchor", "middle")
+						.attr("opacity", 0.4)
+						.style("font-family", "Oswald")
+						.on('mouseover', textMouseOver)
+						.on('mouseout', textMouseOut)
+						.on('click', textClick)
+						.attr("size", function(w){
+							if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+								return demFontSizeScale(info.words[w].maxDem);
+							}
+							else return repFontSizeScale(info.words[w].maxRep);
+						})
+						.style("font-size", function(w){
+							if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+								return demFontSizeScale(info.words[w].maxDem);
+							}
+							else return repFontSizeScale(info.words[w].maxRep);
+						});
+				}
+
+				function updateWordRange(start, end){
+					var noNewRandom = false;	
+					if(clicked != null){ 
+						var earliestOccurrence = d3.min(info.words[clicked.text()], function(o){return o.year;});
+				    	var latestOccurrence= d3.max(info.words[clicked.text()], function(o){return o.year;});
+				    	if(latestOccurrence < start || earliestOccurrence > end){
+							clicked.on("mouseout", textMouseOut).on("mouseover", textMouseOver);
+							var evt = document.createEvent("MouseEvents");
+							evt.initMouseEvent("mouseout", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+							clicked[0][0].dispatchEvent(evt);
+							clicked = null;
+							clickedRect = null;
+						}
+						else{
+							noNewRandom = true;
+						}
+					} 
+					var maxDemImportance = 0;
+					var maxRepImportance = 0;
+					var words = Object.keys(info.words).filter(function(w){
+						var earliestDate = d3.min(info.words[w], function(o){return o.year;});
+						var latestDate = d3.max(info.words[w], function(o){return o.year;});
+						if(latestDate < start || earliestDate > end) return false;
+						var demWords = info.words[w].filter(function(o){return Presidents[o.president] == 0;});
+						var repWords = info.words[w].filter(function(o){return Presidents[o.president] == 1;});
+						var maxDem = d3.max(demWords, function(x){return x.importance;});
+						var maxRep = d3.max(repWords, function(x){return x.importance;});
+						if(maxDem > maxDemImportance) maxDemImportance = maxDem;
+						if(maxRep > maxRepImportance) maxRepImportance = maxRep;
+						return maxRep> repThreshold || maxDem > demThreshold;
+					});
+					demFontSizeScale = d3.scale.log().domain([demThreshold,maxDemImportance]).range([4, 22]);
+					repFontSizeScale = d3.scale.log().domain([repThreshold,maxRepImportance]).range([4, 22]);
+					var randomIndex = Math.floor(Math.random() * words.length);
+					var randomWordW = words[randomIndex];
+					var text = svg.selectAll(".words").data(words, function(d) { return(d); });
+					text.classed("randomWord", function(w){
+						return !noNewRandom && w == randomWordW
+					});
+					text.transition().duration(500).style("font-size", function(w){
+						if(clicked != null && w == clicked.text()) return 24;
+						if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+							return demFontSizeScale(info.words[w].maxDem);
+						}
+						else return repFontSizeScale(info.words[w].maxRep);
+					}).attr("size", function(w){
+							if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+								return demFontSizeScale(info.words[w].maxDem);
+							}
+							else return repFontSizeScale(info.words[w].maxRep);
+					});
+
+
+					text.enter().append("text")
+						.text(function(w){return w;})
+						.classed("words", "true")
+						.classed("randomWord", function(w){
+							return !noNewRandom && w == randomWordW;
+						})
+						.attr("x", function(w){return xScale(determineParty(w));})
+						.attr("y", function(w){return yScale(Math.random());})
+						.attr("text-anchor", "middle")
+						.attr("opacity", 0.4)
+						.style("font-family", "Oswald")
+						.on('mouseover', textMouseOver)
+						.on('mouseout', textMouseOut)
+						.on('click', textClick)
+						.attr("size", function(w){
+							if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+								return demFontSizeScale(info.words[w].maxDem);
+							}
+							else return repFontSizeScale(info.words[w].maxRep);
+						})
+						.style("font-size", function(w){
+							if(clicked != null && w == clicked.text()) return 24;
+							if(info.words[w].maxRep == null || info.words[w].maxDem > info.words[w].maxRep){
+								return demFontSizeScale(info.words[w].maxDem);
+							}
+							else return repFontSizeScale(info.words[w].maxRep);
+						});
+					text.exit().remove();
+					if(noNewRandom == false){
+						randomWord(false);
+					}
+				}
+
+				d3.json('data.json', function(error, data){
+					info = data;
+					plotWords();
+					randomWord(true);
+					
+				});
+
+
+				function determineParty(word){
+					var republicanImportance = info.words[word].maxRep == null ? 0 : info.words[word].maxRep;
+					var democratImportance = info.words[word].maxDem == null ? 0 : info.words[word].maxDem;
+					
+					return republicanImportance/ (republicanImportance + democratImportance);
+				}
+				
+				
+			</script>
+        </div>
+        <div class="col-md-3">
+        	<div id="presidentsBar"></div>
+        </div>
+        <style>
+            #presidentsBar{
+            }
+            .centered{
+                margin: auto;
+            }
+            .textCenter{
+                text-align: center;
+            }
+            .red{
+                border: solid 3px rgb(255,0,0);
+            }
+            .blue{
+                border: solid 3px rgb(0,0,255);
+            }
+        </style>
+    	<script>
+
+				function showPresidents(word, data, yearStart, yearEnd){
+					var width = 210;
+					
+					var presidents = getPresidentsFromWord(word, data, yearStart, yearEnd);                
+					if(presidents.length > 3){
+					    twoColumnFormat(presidents, width);
+					} else {
+					    oneColumnFormat(presidents, width);
+					}
+				}
+				    
+				function getPresidentsFromWord(word, data, yearStart, yearEnd){
+					var presidents = [];
+					var usageList = data.words[word];
+					for(var i = 0; i < usageList.length; i++){
+					    var curPres = usageList[i].president;
+					    if(presidents.indexOf(curPres) == -1){
+						if(!(pI[curPres].RangeEnd < yearStart) && !(pI[curPres].RangeStart > yearEnd)){
+						    presidents.push(curPres);
+						}
+					    }
+					}
+					return presidents;
+				}
+				
+				function oneColumnFormat(presidents, width){
+				        while (document.getElementById("presidentsBar").hasChildNodes()) {
+						document.getElementById("presidentsBar").removeChild(document.getElementById("presidentsBar").lastChild);
+					}
+					var presidentsBar = d3.select("#presidentsBar");
+					presidentsBar.attr("style", "float: right; width:" + width + "px;");
+					for(var j = 0; j < presidents.length; j++){
+						var president = presidents[j];
+						var imageFile = "PresidentsImages/";
+						if(president == "George W Bush"){
+							imageFile += president + ".jpeg";
+						} else {
+							imageFile += president + ".jpg";
+						}
+						var blurb = presidentsBar.append("div").attr("class", president).append("p");
+						var imageWidth = 100 - 10 * presidents.length;
+						var pWidth = width * imageWidth/100;
+						var presidentClass = "centered " + getPresidentColor(president);
+						blurb.append("img").attr("alt", president).attr("onmouseover", "generateHoverText(this, \"" + president + "\")")
+							.attr("onmouseout", "removeHoverText(this, \"" + president + "\")").attr("width", imageWidth + "%").attr("src", imageFile)
+							.attr("class", presidentClass).attr("style", "display:block; margin:auto;");
+						blurb.append("span").attr("class", "centered").attr("style", "float: right; width: 100%; text-align: center").text(president);
+					}
+				}
+				
+				function twoColumnFormat(presidents, width){
+					while (document.getElementById("presidentsBar").hasChildNodes()) {
+						document.getElementById("presidentsBar").removeChild(document.getElementById("presidentsBar").lastChild);
+					}
+					var presidentsBar = d3.select("#presidentsBar");
+					presidentsBar.attr("style", "float: right; width:" + width + "px;");
+				
+					var columnWidth = (width/2 - 1);
+					var leftCol = presidentsBar.append("div").attr("id", "left").attr("style", "float: left; width: " + columnWidth + "px;");
+					var rightCol = presidentsBar.append("div").attr("id", "right").attr("style", "float: right; width: " + columnWidth + "px;");
+					
+					for(var j = 0; j < presidents.length; j++){
+						var president = presidents[j];
+						var imageFile = "PresidentsImages/";
+						if(president == "George W Bush"){
+							imageFile += president + ".jpeg";
+						} else {
+							imageFile += president + ".jpg";
+						}
+						var imageWidth = 100 - 2 * presidents.length;
+						var pWidth = columnWidth * imageWidth/100;
+						var presidentBlurb;
+						if((j % 2) == 0){
+							presidentBlurb = leftCol.append("div").attr("class", "centered").attr("style", "width: " + pWidth + "px;")
+								.append("p").attr("style", "height: " + (pWidth + 12) + "px; width: " + pWidth + "px;");
+						} else{
+							presidentBlurb = rightCol.append("div").attr("class", "centered").attr("style", "width: " + pWidth + "px;")
+								.append("p").attr("style", "height: " + (pWidth + 12) + "px; width: " + pWidth + "px;");
+						}
+						var presidentClass = "textCenter " + getPresidentColor(president);
+						presidentBlurb.append("img").attr("alt", president).attr("onmouseover", "generateHoverText(this, \"" + president + "\")")
+							.attr("onmouseout", "removeHoverText(this, \"" + president + "\")").attr("width", imageWidth + "%").attr("src", imageFile).attr("class", presidentClass)
+							.attr("style", "display:block; margin:auto;");
+						presidentBlurb.append("span").attr("class", "centered").attr("style", "float: left; width: " + pWidth + "px; text-align: center").text(president);
+					}
+				}
+				
+				function generateHoverText(element, presidentName){
+					var rect = element.getBoundingClientRect();
+					var info = document.getElementById(presidentName);
+					var xCoord = rect.left - info.getAttribute("width");
+					var yCoord = rect.top;
+					//console.log(rect.left, rect.top, xCoord);
+					var info = d3.select(info).style("left", xCoord + "px").style("top", yCoord + "px");
+					info.transition().duration(150).style("opacity", 1);
+				}
+				
+				function removeHoverText(element, presidentName){
+					var info = document.getElementById(presidentName);
+					var info = d3.select(info).transition().duration(150).style("opacity", 0);//.style("left", 0).style("top", 0);
+				}
+				
+				function getPresidentParty(president){
+					if(Presidents[president] == 1){
+						return "Republican";
+					} else{
+						return "Democrat";
+					}
+				}
+				
+				function getPresidentColor(president){
+					var party = Presidents[president];
+					var color = "blue";
+					if(party == 1){
+						color = "red";
+					}
+					return color;
+				}
+				
+				function createPresidentInfoTags(data){
+					var svgWidth = 200;
+					var svgHeight = 300;
+					var xCoord = 15;
+					for(var president in data){
+						var yCoord = 15;
+						var presidentData = data[president];
+						var name = "<b>Name:</b> " + president;
+						var svg = d3.select("body").append("svg").attr("width", svgWidth).attr("height", svgHeight)
+							.attr("style", "position: fixed; background-color: #E9D494; opacity: 0; pointer-events: none; z-index:2").attr("id", president);
+						svg.append("foreignObject").attr("width", svgWidth - xCoord - 5).attr("x", xCoord).attr("y", yCoord).attr("height", yCoord * 3).append("xhtml:body")
+								.html("<p>" + name + "</p>").attr("style", "margin: 0; padding: 0; background-color: #E9D494;");
+						for(key in presidentData){
+							if(key.indexOf("Range") != -1){
+								continue;
+							}
+							var value = presidentData[key];
+							var text = "<b>" + key + ":</b> " + value;
+							yCoord += 20;
+							svg.append("foreignObject").attr("width", svgWidth - xCoord - 5).attr("x", xCoord).attr("y", yCoord).attr("height", yCoord * 3).append("xhtml:body")
+								.html("<p>" + text + "</p>").attr("style", "margin: 0; padding: 0; background-color: #E9D494; ou");
+							//svg.append("text").text(text).attr("x", xCoord).attr("y", yCoord);
+						}
+					}
+				}			
+				
+				
+    	</script>
+       </div>
+       <div class="row">
+	       <div class="col-md-12"> 
+	       		<div align="middle" id="time"></div>
+	       		<style>
+
+					.bar:hover rect { fill: brown; transition: 0.4s ease-out; }  /*or orange*/
+					.bar rect { fill: steelblue; }
+					.axis { font: 10px sans-serif; }
+					.axis path { fill: none; stroke: black;}
+					.axis line { stroke: #000; fill: none; shape-rendering: crispEdges; }
+					.axis text { font-size: x-small; }
+
+					.d3-tip {
+					  line-height: 1;
+					  font-weight: bold;
+					  padding: 12px;
+					  background: rgba(0, 0, 0, 0.8);
+					  color: #fff;
+					  border-radius: 2px;
+					}
+
+					/* Creates a small triangle extender for the tooltip */
+					.d3-tip:after {
+					  box-sizing: border-box;
+					  display: inline;
+					  font-size: 10px;
+					  width: 100%;
+					  line-height: 1;
+					  color: rgba(0, 0, 0, 0.8);
+					  content: "\25BC";
+					  position: absolute;
+					  text-align: center;
+					}
+
+					/* Style northward tooltips differently */
+					.d3-tip.n:after {
+					  margin: -1px 0 0 0;
+					  top: 100%;
+					  left: 0;
+					}
+
+					</style>
+
+					<!-- this is the total # of speeches by year-->
+					
+					<script>
+
+					var word;
+					var startTime;
+					var endTime;
+					var temp;
+					var text;
+					var svg3;
+
+					function distribution(start, end, word) {
+					    startTime = start;
+					    endTime = end;
+					    this.word = word;
+
+					    var sequence = new Array(end - start);
+					    for (var i = 0; i < (end - start); i++) {
+					      sequence[i] = start + i;
+					    };
+
+					    for (var i=0; i < info.words[word].length; i++) {
+					      if (info.words[word][i].year >= start && info.words[word][i].year <= end) {
+					        sequence.push(info.words[word][i].year);
+					      }
+					    }
+
+					    return sequence;
+					}
+
+					function update(start, end, word) {
+						 var margin = { top: 30, right: 30, bottom: 30, left: 30 };
+						  var height = 250 - margin.left - margin.right;
+						  var padding = 30;
+						  var width = d3.select("#time").style("width");
+					  	width = +width.substring(0, width.length-2);
+
+					    svg3.selectAll(".bar").remove();
+					    svg3.selectAll("text").remove();
+					    svg3.selectAll(".axis").remove();
+
+					    var startTime = start;
+					    var endTime = end;
+
+					    var newdata = distribution(start, end, word);
+
+					    var startYear = new Date(startTime, 0, 1);
+					    var endYear = new Date(endTime, 0, 1);
+
+					    var histogram = d3.layout.histogram().bins(endTime - startTime);
+					    var bins = histogram(newdata);
+					    var binWidth = bins[0].dx; // bin width
+
+					    var xScale = d3.scale.linear()
+					    .domain([d3.min(newdata), d3.max(newdata)]).range([0, width]);
+
+					    var x = d3.time.scale()
+					        .domain([startYear, endYear])
+					        .rangeRound([0, width]);
+
+					    var yScale = d3.scale.linear()
+					    .domain([1, d3.max(bins, function (bin) { return bin.y; })])
+					    .range([height - padding, 0]);
+
+					    var tip = d3.tip()
+					    .attr('class', 'd3-tip')
+					    .offset([-10, 0])
+					    .html(function(bin) {
+					      return "<strong>Frequency:</strong> <span style='color:red'>" + (bin.y - 1) + "</span>";
+					    });
+
+					    svg3.call(tip);
+
+					    var bars = svg3.selectAll("bins").data(bins);
+
+					    bars.enter().append("g").attr("class", "bar")
+					        .on('mouseover', tip.show)
+					        .on('mouseout', tip.hide);
+
+					    bars.attr("transform", function (bin) {
+					      return "translate(" + xScale(bin.x) + "," + (height - padding) + ")";
+					    })
+
+					    // In each bar's group, add a rect
+					    var rects = bars.append("rect")
+					    .attr("x", 1)
+					    .attr("width", xScale(binWidth) - xScale(0) - 1)
+					    .attr("height", 0);
+
+					    // the text label
+					    bars.append("text")
+					    .attr("x", 0.5 * (xScale(binWidth) - xScale(0) - 1))
+					    .attr("y", -7)
+					    .style("font-size", "x-small")
+					    .style("text-anchor", "middle")
+					    .style("fill", "#777") // #777
+					    .text(function (bin) { 
+					    	if ((bin.y - 1) != 0) {
+					    		return bin.y - 1; 
+					    	}
+					    });
+
+					    var xAxis = d3.svg.axis().scale(x).ticks(d3.time.year, 1);
+					    svg3.append("g")
+					    .attr("class", "axis")
+					    .attr("transform", "translate(0, " + (height - padding) + ")")
+					    .call(xAxis)
+					    .selectAll("text")
+					    .attr("y", -5)
+					    .attr("x", -35)
+					    .attr("dy", ".35em")
+					    .attr("transform", "rotate(-90)") // can be rotate(90)
+					    .style("text-anchor", "start");
+
+					    rects.transition().duration(800).ease("elastic").attr("height", function(bin) {
+					      return height - padding - yScale(bin.y);
+					    });
+
+					    bars.transition().duration(800).ease("elastic").attr("transform", function (bin) {
+					      return "translate(" + xScale(bin.x) + "," + yScale(bin.y) + ")";
+					    })
+					  };
+					 
+					function initializeHistogram(initStart, initEnd, word){
+
+					  var width = d3.select("#time").style("width");
+					  width = +width.substring(0, width.length-2); 
+					  var sequence = distribution(initStart, initEnd, word);
+
+					  var startYear = new Date(startTime, 0, 1);
+					  var endYear = new Date(endTime, 0, 1);
+
+					  var margin = { top: 30, right: 30, bottom: 30, left: 30 };
+					  var height = 250 - margin.left - margin.right;
+					  var padding = 30;
+
+					  d3.select("#time").append("h3").text("Histogram of the Selected Keyphrase:").style("text-align", "left").style("margin-left", "25");
+
+					  svg3 = d3.select("#time").append("svg")
+					  .attr("height", height + margin.left + margin.right)
+					  .attr("width", width + margin.top + margin.bottom)
+					  .append("g")
+					  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+					  var histogram = d3.layout.histogram().bins(endTime - startTime);
+					  bins = histogram(sequence);
+					  var binWidth = bins[0].dx; // bin width
+
+					  var xScale = d3.scale.linear()
+					  .domain([d3.min(sequence), d3.max(sequence)]).range([0, width]);
+
+					  var x = d3.time.scale()
+					      .domain([startYear, endYear])
+					      .rangeRound([0, width]);
+
+					  var yScale = d3.scale.linear()
+					  .domain([1, d3.max(bins, function (bin) { return bin.y; })])
+					  .range([height - padding, 0]);
+
+					  var tip = d3.tip()
+					  .attr('class', 'd3-tip')
+					  .offset([-10, 0])
+					  .html(function(bin) {
+					    return "<strong>Frequency:</strong> <span style='color:red'>" + (bin.y - 1) + "</span>";
+					  });
+
+					  svg3.call(tip);
+
+					  var bars = svg3.selectAll(".bar").data(bins);
+
+					  bars.enter().append("g").attr("class", "bar")
+					      .on('mouseover', tip.show)
+					      .on('mouseout', tip.hide);
+
+					  // Use a transform to position the bar
+					  bars.attr("transform", function (bin) {
+					    return "translate(" + xScale(bin.x) + "," + yScale(bin.y) + ")";
+					  });
+
+					  // In each bar's group, add a rect
+					  bars.append("rect")
+					  .attr("x", 1)
+					  .attr("width", xScale(binWidth) - xScale(0) - 1)
+					  .attr("height", function(bin) {
+					    return height - padding - yScale(bin.y);
+					  });
+
+					  // the text label
+					  bars.append("text")
+					  .attr("x", 0.5 * (xScale(binWidth) - xScale(0) - 1))
+					  .attr("y", -7)
+					  .style("font-size", "x-small")
+					  .style("text-anchor", "middle")
+					  .style("fill", "#777")
+					  .text(function (bin) { 
+					  	if ((bin.y - 1) != 0) {
+					  		return bin.y - 1; 
+					  	}
+					  });
+
+					  // bars.exit().remove();
+					  // var yAxis = d3.svg.axis()
+					  //     .scale(yScale)
+					  //     .orient("left")
+					  //     .ticks(10, "%");
+
+					  var xAxis = d3.svg.axis().scale(x).ticks(d3.time.year, 1);
+					  svg3.append("g")
+					  .attr("class", "axis")
+					  .attr("transform", "translate(0, " + (height - padding) + ")")
+					  .call(xAxis)
+					  .selectAll("text")
+					  .attr("y", -5)
+					  .attr("x", -35)
+					  .attr("dy", ".35em")
+					  .attr("transform", "rotate(-90)") // can be rotate(90)
+					  .style("text-anchor", "start");
+
+					  bars.exit().remove();
+					}
+					</script>
+	       </div>
+    	</div>
+    </div>
+</body>

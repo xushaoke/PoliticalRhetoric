@@ -1,0 +1,72 @@
+{"Richard Nixon":{
+    "Party":"Republican",
+    "President Number": 37,
+    "Served":"1969-1974",
+    "RangeStart":1952,
+    "RangeEnd":1974,
+    "Notable For":"Ending the Vietnam War, Opening relations with the Chinese following the so-called ping-pong diplomacy of the 1970's, Led the U.S. to the moon in 1969, Resigned in 1974 following the fallout from the Watergate scandal."
+}, "Lyndon Johnson":{
+    "Party": "Republican",
+    "President Number": 36,
+    "Served": "1963-1969",
+    "RangeStart":1963,
+    "RangeEnd":1969,
+    "Notable For": "Assumed the Presidency following the assassination of JFK. Pioneering social reforms including the Civil Rights Act, Medicare, and Medicaid. Also responsible for the escalation of the Vietnam War."
+}, "Bill Clinton":{
+    "Party": "Democrat",
+    "President Number": 42,
+    "Served": "1993-2001",
+    "RangeStart":1993,
+    "RangeEnd":2001,
+    "Notable For": "Drafting NAFTA, or the North American Free Trade Agreement, Welfare Reform, Mediating the Oslo Accords, Being impeached following his affair with White House intern Monica Lewinsky."
+}, "Gerald Ford": {
+    "Party": "Republican",
+    "President Number": 38,
+    "Served": "1974-1977",
+    "RangeStart":1974,
+    "RangeEnd":1977,
+    "Notable For": "Assuming the presidency following the resignation of Richard Nixon, whom he pardoned in 1974.  Ford survived 2 assassination attempts, continued the detente with the USSR, and fought steady inflation throughout his presidency"
+}, "Jimmy Carter": {
+    "Party": "Democrat",
+    "President Number": 39,
+    "Served": "1977-1981",
+    "RangeStart":1976,
+    "RangeEnd":1981,
+    "Notable For": "Presiding over the Camp David Accords, The Iranian Hostage Crisis, the 3 Mile Island Nuclear Incident and the U.S. energy crisis, and his humanitarian work in the years following his Presidency."
+}, "Barack Obama": {
+    "Party": "Democrat",
+    "President Number": 44,
+    "Served": "2009-2015",
+    "RangeStart":2004,
+    "RangeEnd":2015,
+    "Notable For": "The first African-American president of the U.S., ended U.S. involvement in the wars in Iraq and Afghanistan, Passed a comprehensive economic stimulus package following the Great Recession, and passed the Afordable Care Act."
+}, "George H W Bush": {
+    "Party": "Republican",
+    "President Number": 41,
+    "Served": "1989-1993",
+    "RangeStart":1988,
+    "RangeEnd":1993,
+    "Notable For": "Signing the Start I treaty with the USSR, presiding over the US during the breakup of the USSR and the end of the cold war.  Also led the US through the Gulf War and invasion of Panama."
+}, "George W Bush": {
+    "Party": "Republican",
+    "President Number": 43,
+    "Served": "2001-2009",
+    "RangeStart":2001,
+    "RangeEnd":2009,
+    "Notable For": "Initiating the war on terror following the September 11th attacks, and involving the US in engagements in Iraq and Afghanistan.  President during the credit and housing crisis in 2007 that eventually ballooned into the Great Recession."
+}, "Ronald Reagan": {
+    "Party": "Republican",
+    "President Number": 43,
+    "Served": "1981-1989",
+    "RangeStart":1964,
+    "RangeEnd":1989,
+    "Notable For": "Reaganomics,the economic policy named after him supporting deregulation and lower taxes, the War on Drugs, INF treaty with Russia, the invasion of Granada and immigration reform."
+}, "John Kennedy": {
+    "Party": "Democrat",
+    "President Number": 35,
+    "Served": "1961-1963",
+    "RangeStart":1960,
+    "RangeEnd":1963,
+    "Notable For": "Leading the United States through the Cuban Missile Crisis, jump-starting NASA funding to compete in the space race, creating the Peace Corps, his outspoken support for the civil rights movement, and his assassination in 1963."
+}
+}
